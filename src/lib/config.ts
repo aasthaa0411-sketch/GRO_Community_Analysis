@@ -23,3 +23,13 @@ export function authHeaders(): HeadersInit {
   const key = getApiKey();
   return key ? { Authorization: `Bearer ${key}` } : {};
 }
+
+const YOUTUBE_API_KEY = "gro_youtube_api_key";
+
+export function getYouTubeApiKey(): string {
+  return localStorage.getItem(YOUTUBE_API_KEY) ?? "";
+}
+
+export function setYouTubeApiKey(key: string): void {
+  localStorage.setItem(YOUTUBE_API_KEY, key);
+}

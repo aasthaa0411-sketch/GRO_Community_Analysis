@@ -17,8 +17,9 @@ export function ConnectionSettings() {
     <section className="card settings">
       <h2>Connection</h2>
       <p className="hint">
-        Point this app at your Render bot. After the bot deploys the export API,
-        paste the <code>EXPORT_API_KEY</code> here.
+        Export API is live on Render. Paste your <code>EXPORT_API_KEY</code> below
+        (same value as on Render — never commit it). Local bot alternative:{" "}
+        <code>http://127.0.0.1:3001</code>.
       </p>
       <label>
         Bot URL

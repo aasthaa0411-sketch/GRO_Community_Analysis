@@ -7,35 +7,33 @@ export interface DiscordGuild {
 export interface DiscordChannel {
   id: string;
   name: string;
-  type: string;
+  type: number;
+  parent_id: string | null;
 }
 
 export interface DiscordMessage {
-  message_id: string;
+  id: string;
   channel_id: string;
-  channel_name: string;
   guild_id: string;
-  guild_name: string;
   author_id: string;
-  author_name: string;
-  timestamp: string;
+  author_username: string;
+  author_display_name: string;
   content: string;
-  attachments: string[];
-  reply_to_message_id: string | null;
-  edited_timestamp: string | null;
+  created_at: string;
+  edited_at: string | null;
+  attachment_urls: string[];
+  reply_to_id: string | null;
 }
 
 export interface DiscordExportResponse {
-  platform: "discord";
-  exported_at: string;
+  guild_id: string;
+  channel_id: string;
   filters: {
-    guild_id: string;
-    channel_id: string;
-    start: string;
-    end: string;
+    start: string | null;
+    end: string | null;
     user_id: string | null;
   };
-  message_count: number;
+  count: number;
   messages: DiscordMessage[];
 }
 

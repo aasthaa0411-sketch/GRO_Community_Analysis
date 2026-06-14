@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { ConnectionSettings } from "./components/ConnectionSettings";
+import { getActiveTab, setActiveTab, type TabId } from "./lib/tabPrefs";
 import { DiscordTab } from "./tabs/DiscordTab";
 import { TikTokTab } from "./tabs/TikTokTab";
 import { YouTubeTab } from "./tabs/YouTubeTab";
-
-type TabId = "discord" | "youtube" | "tiktok";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "discord", label: "Discord" },
@@ -13,7 +12,12 @@ const TABS: { id: TabId; label: string }[] = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabId>("discord");
+  const [activeTab, setActiveTabState] = useState<TabId>(getActiveTab);
+
+  function selectTab(tab: TabId) {
+    setActiveTabState(tab);
+    setActiveTab(tab);
+  }
 
   return (
     <div className="app">
@@ -32,7 +36,7 @@ export default function App() {
             role="tab"
             aria-selected={activeTab === tab.id}
             className={activeTab === tab.id ? "active" : ""}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => selectTab(tab.id)}
           >
             {tab.label}
           </button>
@@ -40,9 +44,15 @@ export default function App() {
       </nav>
 
       <main className="tab-content">
-        {activeTab === "discord" && <DiscordTab />}
-        {activeTab === "youtube" && <YouTubeTab />}
-        {activeTab === "tiktok" && <TikTokTab />}
+        <div className="tab-pane" hidden={activeTab !== "discord"}>
+          <DiscordTab />
+        </div>
+        <div className="tab-pane" hidden={activeTab !== "youtube"}>
+          <YouTubeTab />
+        </div>
+        <div className="tab-pane" hidden={activeTab !== "tiktok"}>
+          <TikTokTab />
+        </div>
       </main>
     </div>
   );

@@ -43,32 +43,32 @@ function escapeCsv(value: string): string {
   return value;
 }
 
-export function messagesToCsv(
-  messages: Array<Record<string, unknown>>,
+const DISCORD_CSV_HEADERS = [
+  "id",
+  "channel_id",
+  "guild_id",
+  "author_id",
+  "author_username",
+  "author_display_name",
+  "content",
+  "created_at",
+  "edited_at",
+  "attachment_urls",
+  "reply_to_id",
+] as const;
+
+export function objectsToCsv(
+  headers: readonly string[],
+  rows: readonly object[],
 ): string {
-  if (messages.length === 0) {
-    return "message_id,channel_id,channel_name,guild_id,guild_name,author_id,author_name,timestamp,content,attachments,reply_to_message_id,edited_timestamp\n";
+  if (rows.length === 0) {
+    return `${headers.join(",")}\n`;
   }
 
-  const headers = [
-    "message_id",
-    "channel_id",
-    "channel_name",
-    "guild_id",
-    "guild_name",
-    "author_id",
-    "author_name",
-    "timestamp",
-    "content",
-    "attachments",
-    "reply_to_message_id",
-    "edited_timestamp",
-  ];
-
-  const rows = messages.map((msg) =>
+  const csvRows = rows.map((row) =>
     headers
       .map((key) => {
-        const raw = msg[key];
+        const raw = (row as Record<string, unknown>)[key];
         if (raw == null) return "";
         if (Array.isArray(raw)) return escapeCsv(raw.join("; "));
         return escapeCsv(String(raw));
@@ -76,7 +76,28 @@ export function messagesToCsv(
       .join(","),
   );
 
-  return [headers.join(","), ...rows].join("\n");
+  return [headers.join(","), ...csvRows].join("\n");
+}
+
+export function messagesToCsv(messages: readonly object[]): string {
+  return objectsToCsv([...DISCORD_CSV_HEADERS], messages);
+}
+
+const YOUTUBE_CSV_HEADERS = [
+  "id",
+  "video_id",
+  "parent_id",
+  "author_channel_id",
+  "author_display_name",
+  "text",
+  "like_count",
+  "published_at",
+  "updated_at",
+  "is_reply",
+] as const;
+
+export function youtubeCommentsToCsv(comments: readonly object[]): string {
+  return objectsToCsv([...YOUTUBE_CSV_HEADERS], comments);
 }
 
 export function downloadText(content: string, filename: string, mime: string) {
