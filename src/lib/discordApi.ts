@@ -1,12 +1,59 @@
 import { authHeaders, getBotUrl } from "./config";
+import { messagesToCsv } from "./exportUtils";
 import type {
   ApiError,
   DiscordChannel,
   DiscordExportResponse,
   DiscordGuild,
+  DiscordMessage,
 } from "./discordTypes";
 
 export const GRO_GUILD_ID = "1453124352890503229";
+
+/** Discord snowflake IDs are numeric strings, typically 17–20 digits. */
+export function isDiscordUserId(value: string): boolean {
+  return /^\d{17,20}$/.test(value.trim());
+}
+
+export function normalizeUserFilter(value: string): string {
+  return value.trim().replace(/^@+/, "").toLowerCase();
+}
+
+export function isUsernameFilter(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed.length > 0 && !isDiscordUserId(trimmed);
+}
+
+export function messageMatchesUserFilter(
+  message: DiscordMessage,
+  filter: string,
+): boolean {
+  const trimmed = filter.trim();
+  if (!trimmed) return true;
+  if (isDiscordUserId(trimmed)) {
+    return message.author_id === trimmed;
+  }
+  const needle = normalizeUserFilter(trimmed);
+  return (
+    message.author_username.toLowerCase() === needle ||
+    message.author_display_name.toLowerCase() === needle
+  );
+}
+
+function applyUserFilter(
+  payload: DiscordExportResponse,
+  filter: string,
+): DiscordExportResponse {
+  const messages = payload.messages.filter((message) =>
+    messageMatchesUserFilter(message, filter),
+  );
+  return {
+    ...payload,
+    filters: { ...payload.filters, user_id: filter.trim() },
+    count: messages.length,
+    messages,
+  };
+}
 
 function friendlyError(status: number, rawMessage: string): string {
   if (status === 401) {
@@ -28,8 +75,10 @@ function friendlyError(status: number, rawMessage: string): string {
 }
 
 function networkError(): Error {
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "your app origin";
   return new Error(
-    "Could not reach the bot. Check the Bot URL. If you see a CORS error in the browser console, ensure the bot has CORS_ORIGINS=http://localhost:5173 on Render.",
+    `Could not reach the bot. Check the Bot URL and Export API key. If you see a CORS error in the browser console, add this origin to CORS_ORIGINS on Render: ${origin}`,
   );
 }
 
@@ -101,15 +150,20 @@ export interface ExportResult {
 export async function exportMessages(
   params: ExportParams,
 ): Promise<ExportResult> {
+  const trimmedUser = params.userId?.trim();
+  const useClientFilter = trimmedUser ? isUsernameFilter(trimmedUser) : false;
+  const serverUserId = trimmedUser && !useClientFilter ? trimmedUser : undefined;
+  const requestFormat = useClientFilter ? "json" : (params.format ?? "json");
+
   const search = new URLSearchParams({
     guild_id: params.guildId,
     channel_id: params.channelId,
     start: params.start,
     end: params.end,
-    format: params.format ?? "json",
+    format: requestFormat,
   });
 
-  if (params.userId) search.set("user_id", params.userId);
+  if (serverUserId) search.set("user_id", serverUserId);
 
   const url = `${getBotUrl()}/api/discord/export?${search}`;
   let res: Response;
@@ -139,12 +193,26 @@ export async function exportMessages(
     filenameFromContentDisposition(res.headers.get("Content-Disposition")) ??
     undefined;
 
-  if (params.format === "csv") {
+  if (params.format === "csv" && !useClientFilter) {
     return { data: await res.blob(), filename };
   }
 
+  const payload = (await res.json()) as DiscordExportResponse;
+  const filtered =
+    useClientFilter && trimmedUser
+      ? applyUserFilter(payload, trimmedUser)
+      : payload;
+
+  if (params.format === "csv") {
+    const csv = messagesToCsv(filtered.messages);
+    return {
+      data: new Blob([csv], { type: "text/csv;charset=utf-8" }),
+      filename,
+    };
+  }
+
   return {
-    data: (await res.json()) as DiscordExportResponse,
+    data: filtered,
     filename,
   };
 }

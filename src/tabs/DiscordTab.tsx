@@ -38,6 +38,15 @@ function pickChannel(list: DiscordChannel[], savedChannelId: string): string {
   return "";
 }
 
+function emptyUserFilterWarning(
+  count: number,
+  userId: string,
+): string | null {
+  const trimmed = userId.trim();
+  if (count > 0 || !trimmed) return null;
+  return `No messages found for "${trimmed}" in the selected channel and date range. Check the username or server display name.`;
+}
+
 function allContentEmpty(messages: DiscordExportResponse["messages"]): boolean {
   return messages.length > 0 && messages.every((m) => !m.content.trim());
 }
@@ -208,7 +217,10 @@ export function DiscordTab() {
       const payload = result as DiscordExportResponse;
       setLastExport(payload);
 
-      if (allContentEmpty(payload.messages)) {
+      const userFilterWarning = emptyUserFilterWarning(payload.count, userId);
+      if (userFilterWarning) {
+        setWarning(userFilterWarning);
+      } else if (allContentEmpty(payload.messages)) {
         setWarning(
           "All exported messages have empty content. Message Content Intent may not be approved yet in the Discord Developer Portal.",
         );
@@ -256,7 +268,10 @@ export function DiscordTab() {
       const payload = result as DiscordExportResponse;
       setLastExport(payload);
 
-      if (allContentEmpty(payload.messages)) {
+      const userFilterWarning = emptyUserFilterWarning(payload.count, userId);
+      if (userFilterWarning) {
+        setWarning(userFilterWarning);
+      } else if (allContentEmpty(payload.messages)) {
         setWarning(
           "All messages have empty content. Word/length analytics will be limited until Message Content Intent is approved.",
         );
@@ -359,13 +374,16 @@ export function DiscordTab() {
         )}
 
         <label>
-          User ID <span className="optional">(optional)</span>
+          Username or user ID <span className="optional">(optional)</span>
           <input
             type="text"
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
-            placeholder="Discord user ID"
+            placeholder="e.g. lealan12 or 123456789012345678"
           />
+          <span className="hint">
+            Enter a Discord @username, server display name, or numeric user ID.
+          </span>
         </label>
       </div>
 
